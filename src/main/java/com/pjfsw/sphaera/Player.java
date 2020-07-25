@@ -51,6 +51,13 @@ public class Player implements GameObject {
         }
     }
 
+    public void increaseEnergy(int amount) {
+        energy += amount;
+        if (energy > ENERGY_MAX) {
+            energy = ENERGY_MAX;
+        }
+    }
+
     public int getLife() {
         return life;
     }

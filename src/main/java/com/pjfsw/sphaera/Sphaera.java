@@ -38,6 +38,8 @@ public class Sphaera {
     private int worldX = -HORIZONTAL_TILES/2;
     private int worldY = -VERTICAL_TILES/2;
     private Color dayNightCycle;
+    private int highlightEnergy = 0;
+    private int lastPlayerEnergy;
 
     private Sphaera() {
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
@@ -140,11 +142,16 @@ public class Sphaera {
         g.drawImage(player.image(), TILE_SIZE*(player.x()-worldX), TILE_SIZE*(player.y()-worldY), null);
     }
 
-    private void drawGauge(Graphics2D g, int value, int max, String str, int xpos) {
+    private void drawGauge(Graphics2D g, int value, int max, String str, int xpos, int highlight) {
         final int HUD_OFFSET = 1;
         final int HUD_HEIGHT = 16;
         g.setColor(Color.DARK_GRAY);
         g.drawRect(HUD_OFFSET + xpos, SCR_H, 100, HUD_HEIGHT);
+        if (highlight < 0) {
+            g.setColor(Color.RED);
+        } else if (highlight > 0) {
+            g.setColor(Color.GREEN);
+        }
         g.fillRect(HUD_OFFSET + xpos,  SCR_H, value * 100 / max, HUD_HEIGHT);
         g.setColor(Color.WHITE);
         g.drawString(str, 2+HUD_OFFSET+xpos, SCR_H + font.getSize());
@@ -168,9 +175,9 @@ public class Sphaera {
 
     private void drawHud(Graphics2D g) {
         g.setFont(font);
-        drawGauge(g, world.getTime(), World.TIME_PER_DAY, String.format("Day %d", world.getDay()), 0);
-        drawGauge(g, player.getLife(), Player.LIFE_MAX, "Life", 110);
-        drawGauge(g, player.getEnergy(), Player.ENERGY_MAX, "Energy", 220);
+        drawGauge(g, world.getTime(), World.TIME_PER_DAY, String.format("Day %d", world.getDay()), 0, 0);
+        drawGauge(g, player.getLife(), Player.LIFE_MAX, "Life", 110,0 );
+        drawGauge(g, player.getEnergy(), Player.ENERGY_MAX, "Energy", 220, highlightEnergy);
         drawZeroGauge(g, player.getHappiness(), Player.HAPPINESS_MAX, "Happiness", 330);
     }
 
@@ -189,6 +196,11 @@ public class Sphaera {
     private void draw(Graphics2D g) {
         updateCamera();
 
+        if (player.getEnergy() > lastPlayerEnergy) {
+            highlightEnergy = 60;
+        }
+        lastPlayerEnergy = player.getEnergy();
+
         Graphics2D tg = (Graphics2D)tileImage.getGraphics();
         tg.setColor(Color.BLACK);
         tg.fillRect(0,0, W, H);
@@ -198,6 +210,12 @@ public class Sphaera {
         g.setColor(dayNightCycle);
         g.fillRect(0,0, SCR_W, SCR_H);
         drawHud(g);
+        if (highlightEnergy > 0) {
+            highlightEnergy--;
+        }
+        if (highlightEnergy < 0) {
+            highlightEnergy++;
+        }
     }
 
     public void run() {

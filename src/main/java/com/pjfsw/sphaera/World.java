@@ -4,6 +4,7 @@ import java.awt.Point;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.pjfsw.sphaera.gameobject.FoodObject;
 import com.pjfsw.sphaera.gameobject.FoodObjectFactory;
 import com.pjfsw.sphaera.gameobject.GameObject;
 import com.pjfsw.sphaera.gameobject.ImmovableObjectFactory;
@@ -82,9 +83,16 @@ public class World {
     private void move(int x, int y) {
         int newX = player.x() + x;
         int newY = player.y() + y;
-        if (getObjectAt(newX, newY) == null) {
+        GameObject object = getObjectAt(newX, newY);
+        if (object == null) {
             player.moveTo(player.x() + x, player.y() + y);
             player.consumeEnergy(1);
+            nextTurn();
+        } else if (object instanceof FoodObject) {
+            FoodObject food = (FoodObject)object;
+            player.increaseEnergy(food.getEnergy());
+            gameObjects.get(newX).remove(newY);
+            player.moveTo(player.x() + x, player.y() + y);
             nextTurn();
         }
     }

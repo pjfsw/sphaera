@@ -19,7 +19,7 @@ public class FoodObjectFactory {
     }
 
     public GameObject create() {
-        return new FoodObject(image, 2);
+        return new FoodObject(image, 100);
     }
 
 }
