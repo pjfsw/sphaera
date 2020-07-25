@@ -1,11 +1,7 @@
-package com.pjfsw.sphaera;
+package com.pjfsw.sphaera.gameobject;
 
 import java.awt.image.BufferedImage;
 
 public interface GameObject {
-    int x();
-
-    int y();
-
     BufferedImage image();
 }

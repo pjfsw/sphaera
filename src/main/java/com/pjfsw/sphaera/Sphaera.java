@@ -4,6 +4,7 @@ import static com.pjfsw.sphaera.Tile.TILE_SIZE;
 
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsConfiguration;
@@ -17,8 +18,11 @@ import java.awt.image.BufferedImage;
 import javax.swing.JFrame;
 import javax.swing.WindowConstants;
 
+import com.pjfsw.sphaera.gameobject.GameObject;
+
 public class Sphaera {
     private static final int SCALE = 2;
+    private static final int HUD_H = 32;
     private static final int VERTICAL_TILES = 9;
     private static final int HORIZONTAL_TILES = 9;
     private static final int W = HORIZONTAL_TILES * TILE_SIZE;
@@ -30,19 +34,20 @@ public class Sphaera {
     private final BufferedImage tileImage;
     private final World world;
     private final Player player;
+    private final Font font;
     private int worldX = -HORIZONTAL_TILES/2;
     private int worldY = -VERTICAL_TILES/2;
+    private Color dayNightCycle;
 
     private Sphaera() {
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         GraphicsDevice[] gs = ge.getScreenDevices();
         GraphicsConfiguration gc = gs[0].getConfigurations()[0];
 
-
         tileImage = new BufferedImage(W, H, BufferedImage.TYPE_INT_ARGB);
 
         frame = new JFrame(gc);
-        frame.setPreferredSize(new Dimension(SCR_W,SCR_H));
+        frame.setPreferredSize(new Dimension(SCR_W,SCR_H+HUD_H));
         frame.setTitle("Sphaera");
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.pack();
@@ -54,9 +59,11 @@ public class Sphaera {
                 + frame.getInsets().top + frame.getInsets().bottom));
         frame.setLocationRelativeTo(null);
         frame.setResizable(false);
+        font = new Font("Courier New", Font.PLAIN, 12);
 
         player = new Player();
         world = new World(player);
+        createDayNightCycle();
     }
 
     private static void waitNs(long ns) {
@@ -73,16 +80,17 @@ public class Sphaera {
         if (event.getID() != KeyEvent.KEY_PRESSED) {
             return false;
         }
-        if (event.getKeyChar() == 'w') {
+        createDayNightCycle();
+        if (event.getKeyChar() == 'w' || event.getKeyCode() == KeyEvent.VK_UP) {
             world.moveNorth();
             return true;
-        } else if (event.getKeyChar() == 's') {
+        } else if (event.getKeyChar() == 's' || event.getKeyCode() == KeyEvent.VK_DOWN) {
             world.moveSouth();
             return true;
-        } else if (event.getKeyChar() == 'a') {
+        } else if (event.getKeyChar() == 'a' || event.getKeyCode() == KeyEvent.VK_LEFT) {
             world.moveWest();
             return true;
-        } else if (event.getKeyChar() == 'd') {
+        } else if (event.getKeyChar() == 'd' || event.getKeyCode() == KeyEvent.VK_RIGHT) {
             world.moveEast();
             return true;
         }
@@ -120,23 +128,76 @@ public class Sphaera {
     }
 
     private void drawObjects(Graphics2D g) {
-        for (GameObject go : world.getGameObjects()) {
-            if (go.x() >= worldX && go.x() < worldX + HORIZONTAL_TILES
-                && go.y() >= worldY && go.y() < worldY + VERTICAL_TILES)
-            {
-                g.drawImage(go.image(), TILE_SIZE*(go.x()-worldX), TILE_SIZE*(go.y()-worldY), null);
+        for (int y = 0; y < VERTICAL_TILES; y++) {
+            for (int x = 0 ; x < HORIZONTAL_TILES; x++) {
+                GameObject go = world.getObjectAt(x+worldX,y+worldY);
+                if (go != null) {
+                    g.drawImage(go.image(), TILE_SIZE*x, TILE_SIZE*y, null);
+                }
             }
         }
+
+        g.drawImage(player.image(), TILE_SIZE*(player.x()-worldX), TILE_SIZE*(player.y()-worldY), null);
+    }
+
+    private void drawGauge(Graphics2D g, int value, int max, String str, int xpos) {
+        final int HUD_OFFSET = 1;
+        final int HUD_HEIGHT = 16;
+        g.setColor(Color.DARK_GRAY);
+        g.drawRect(HUD_OFFSET + xpos, SCR_H, 100, HUD_HEIGHT);
+        g.fillRect(HUD_OFFSET + xpos,  SCR_H, value * 100 / max, HUD_HEIGHT);
+        g.setColor(Color.WHITE);
+        g.drawString(str, 2+HUD_OFFSET+xpos, SCR_H + font.getSize());
+    }
+
+    private void drawZeroGauge(Graphics2D g, int value, int max, String str, int xpos) {
+        final int HUD_OFFSET = 1;
+        final int HUD_HEIGHT = 16;
+        int percent = value * 50 / max;
+        g.setColor(Color.DARK_GRAY);
+        g.drawRect(HUD_OFFSET + xpos, SCR_H, 100, HUD_HEIGHT);
+        if (value < 0) {
+            g.fillRect(HUD_OFFSET + xpos + 50 + percent, SCR_H, -percent, HUD_HEIGHT);
+        } else {
+            g.fillRect(HUD_OFFSET + xpos + 50, SCR_H, percent, HUD_HEIGHT);
+        }
+        g.setColor(Color.WHITE);
+        g.drawLine(HUD_OFFSET + xpos + 50, SCR_H, HUD_OFFSET + xpos + 50, SCR_H+HUD_HEIGHT-1);
+        g.drawString(str, 2+HUD_OFFSET+xpos, SCR_H + font.getSize());
+    }
+
+    private void drawHud(Graphics2D g) {
+        g.setFont(font);
+        drawGauge(g, world.getTime(), World.TIME_PER_DAY, String.format("Day %d", world.getDay()), 0);
+        drawGauge(g, player.getLife(), Player.LIFE_MAX, "Life", 110);
+        drawGauge(g, player.getEnergy(), Player.ENERGY_MAX, "Energy", 220);
+        drawZeroGauge(g, player.getHappiness(), Player.HAPPINESS_MAX, "Happiness", 330);
+    }
+
+    private void createDayNightCycle() {
+        int scale = 400;
+        int darkness =  (int)(scale * Math.cos(2 * world.getTime() * Math.PI / World.TIME_PER_DAY)) - scale/2;
+        if (darkness < 0) {
+            darkness = 0;
+        }
+        if (darkness > 200) {
+            darkness = 200;
+        }
+        dayNightCycle = new Color(0,0,0,darkness);
     }
 
     private void draw(Graphics2D g) {
         updateCamera();
+
         Graphics2D tg = (Graphics2D)tileImage.getGraphics();
         tg.setColor(Color.BLACK);
         tg.fillRect(0,0, W, H);
         drawWorld(tg);
         drawObjects(tg);
         g.drawImage(tileImage, 0,0, SCR_W, SCR_H, null);
+        g.setColor(dayNightCycle);
+        g.fillRect(0,0, SCR_W, SCR_H);
+        drawHud(g);
     }
 
     public void run() {

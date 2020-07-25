@@ -1,8 +1,10 @@
-package com.pjfsw.sphaera;
+package com.pjfsw.sphaera.gameobject;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+
+import com.pjfsw.sphaera.Tile;
 
 public class ImmovableObjectFactory {
     private final BufferedImage image;
@@ -14,8 +16,8 @@ public class ImmovableObjectFactory {
         g.fillOval(4,4,24,24);
     }
 
-    public GameObject create(int x, int y) {
-        return new ImmovableObject(x,y, image);
+    public GameObject create() {
+        return new ImmovableObject(image);
     }
 
 }
