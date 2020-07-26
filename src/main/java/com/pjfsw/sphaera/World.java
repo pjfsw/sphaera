@@ -1,28 +1,47 @@
 package com.pjfsw.sphaera;
 
+import java.awt.Color;
 import java.awt.Point;
+import java.awt.event.KeyEvent;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.pjfsw.sphaera.gameobject.FoodObject;
 import com.pjfsw.sphaera.gameobject.FoodObjectFactory;
 import com.pjfsw.sphaera.gameobject.GameObject;
 import com.pjfsw.sphaera.gameobject.ImmovableObjectFactory;
 
 public class World {
-    private static final int IMMOVABLE_OBJECTS = 100000;
-    private static final int FOOD_OBJECTS = 1000;
+    private static final int IMMOVABLE_OBJECTS = 50000;
+    private static final int FOOD_OBJECTS = 5000;
     private static final int WORLD_SPAN = 1000;
     public static final int TIME_PER_DAY = 500;
     private final Player player;
     private final Map<Integer, Map<Integer, GameObject>> gameObjects = new HashMap<>();
     private int day = 1;
     private int time = 0;
+    private Color dayNightCycle;
 
     public World(Player player) {
         this.player = player;
         createImmovableObjects();
         createFoodObjects();
+        createDayNightCycle();
+    }
+
+    private void createDayNightCycle() {
+        int scale = 400;
+        int darkness =  (int)(scale * Math.cos(2 * getTime() * Math.PI / World.TIME_PER_DAY)) - scale/2;
+        if (darkness < 0) {
+            darkness = 0;
+        }
+        if (darkness > 200) {
+            darkness = 200;
+        }
+        dayNightCycle = new Color(0,0,0,darkness);
+    }
+
+    public Color getDayNightCycle() {
+        return dayNightCycle;
     }
 
     Point findEmptySpot() {
@@ -59,6 +78,7 @@ public class World {
             time = 0;
             day++;
         }
+        createDayNightCycle();
     }
     public void addObject(GameObject go, int x, int y) {
         gameObjects
@@ -80,23 +100,6 @@ public class World {
         return null;
     }
 
-    private void move(int x, int y) {
-        int newX = player.x() + x;
-        int newY = player.y() + y;
-        GameObject object = getObjectAt(newX, newY);
-        if (object == null) {
-            player.moveTo(player.x() + x, player.y() + y);
-            player.consumeEnergy(1);
-            nextTurn();
-        } else if (object instanceof FoodObject) {
-            FoodObject food = (FoodObject)object;
-            player.increaseEnergy(food.getEnergy());
-            gameObjects.get(newX).remove(newY);
-            player.moveTo(player.x() + x, player.y() + y);
-            nextTurn();
-        }
-    }
-
     public int getDay() {
         return day;
     }
@@ -105,19 +108,7 @@ public class World {
         return time;
     }
 
-    public void moveWest() {
-        move(-1,0);
-    }
-
-    public void moveEast() {
-        move(1,0);
-    }
-
-    public void moveNorth() {
-        move(0,-1);
-    }
-
-    public void moveSouth() {
-        move(0,1);
+    public void removeObject(final int newX, final int newY) {
+        gameObjects.get(newX).remove(newY);
     }
 }

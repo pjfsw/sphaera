@@ -2,7 +2,7 @@ package com.pjfsw.sphaera.gameobject;
 
 import java.awt.image.BufferedImage;
 
-public class FoodObject implements GameObject {
+public class FoodObject implements GameObject, InventoryObject {
     private final BufferedImage image;
     private final int energy;
 
@@ -16,6 +16,7 @@ public class FoodObject implements GameObject {
         return image;
     }
 
+    @Override
     public int getEnergy() {
         return energy;
     }
