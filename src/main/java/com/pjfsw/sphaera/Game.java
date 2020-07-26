@@ -1,6 +1,7 @@
 package com.pjfsw.sphaera;
 
 import java.awt.event.KeyEvent;
+import java.io.IOException;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
@@ -15,7 +16,7 @@ public class Game {
     private GameState state;
     private final Map<GameState, Drawable> drawables;
 
-    public Game() {
+    public Game() throws IOException {
         state = GameState.IN_GAME;
         player = new Player();
         world = new World(player);
@@ -34,6 +35,9 @@ public class Game {
     private void move(int x, int y) {
         int newX = player.x() + x;
         int newY = player.y() + y;
+        if (world.getTerrainAt(newX, newY) > 0) {
+            return;
+        }
         GameObject object = world.getObjectAt(newX, newY);
         if (object == null) {
             player.moveTo(player.x() + x, player.y() + y);

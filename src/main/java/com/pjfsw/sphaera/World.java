@@ -2,7 +2,7 @@ package com.pjfsw.sphaera;
 
 import java.awt.Color;
 import java.awt.Point;
-import java.awt.event.KeyEvent;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -20,12 +20,58 @@ public class World {
     private int day = 1;
     private int time = 0;
     private Color dayNightCycle;
+    private final int[][] terrain;
 
-    public World(Player player) {
+    public World(Player player) throws IOException {
         this.player = player;
+        terrain = new int[WORLD_SPAN*2][WORLD_SPAN*2];
+        generateTerrain();
         createImmovableObjects();
         createFoodObjects();
         createDayNightCycle();
+    }
+
+    private void generateTerrain() {
+        double threshold = 0.51;
+        for (int x = 0; x < WORLD_SPAN * 2; x++) {
+            for (int y = 0; y < WORLD_SPAN *2; y++) {
+                terrain[x][y] = (Math.random() > threshold) ? 1 : 0;
+            }
+        }
+        // Smooth terrain
+        for (int i = 0; i < 6; i++) {
+            for (int x = 1; x < WORLD_SPAN * 2-1; x++) {
+                for (int y = 1; y < WORLD_SPAN * 2-1; y++) {
+                    int neighborCount = getNeighborCount(x,y);
+                    if (neighborCount > 4) {
+                        terrain[x][y] = 1;
+                    } else if (neighborCount < 4) {
+                        terrain[x][y] = 0;
+                    }
+                }
+            }
+        }
+        int x = 0;
+        while (terrain[WORLD_SPAN+x][WORLD_SPAN] != 0) {
+            terrain[WORLD_SPAN+x][WORLD_SPAN] = 0;
+            x++;
+        }
+    }
+
+    private int getNeighborCount(int x, int y) {
+        int count = 0;
+        for (int nx = x-1; nx <= x+1; nx++) {
+            for (int ny = y-1; ny <= y+1; ny++) {
+                if (nx != x || ny != y) {
+                    count += terrain[nx][ny];
+                }
+            }
+        }
+        return count;
+    }
+
+    public int getTerrainAt(int x, int y) {
+        return terrain[x+WORLD_SPAN][y+WORLD_SPAN];
     }
 
     private void createDayNightCycle() {
@@ -37,7 +83,8 @@ public class World {
         if (darkness > 200) {
             darkness = 200;
         }
-        dayNightCycle = new Color(0,0,0,darkness);
+        //dayNightCycle = new Color(0,0,0,darkness);
+        dayNightCycle = new Color(0,0,0,0);
     }
 
     public Color getDayNightCycle() {
@@ -50,12 +97,12 @@ public class World {
         do {
             x = Random.random(WORLD_SPAN) - WORLD_SPAN/2;
             y = Random.random(WORLD_SPAN) - WORLD_SPAN/2;
-        } while (getObjectAt(x,y) != null || (x == 0 && y == 0));
+        } while (getTerrainAt(x,y) !=0 || getObjectAt(x,y) != null || (x == 0 && y == 0));
         return new Point(x,y);
     }
 
 
-    private void createImmovableObjects() {
+    private void createImmovableObjects() throws IOException {
         ImmovableObjectFactory factory = new ImmovableObjectFactory();
         for (int i = 0; i < IMMOVABLE_OBJECTS; i++) {
             Point spot = findEmptySpot();

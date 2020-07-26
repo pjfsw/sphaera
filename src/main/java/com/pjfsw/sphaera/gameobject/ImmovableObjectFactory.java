@@ -1,19 +1,21 @@
 package com.pjfsw.sphaera.gameobject;
 
-import java.awt.Color;
-import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 
-import com.pjfsw.sphaera.Tile;
+import javax.imageio.ImageIO;
 
 public class ImmovableObjectFactory {
     private final BufferedImage image;
 
-    public ImmovableObjectFactory() {
-        image = Tile.createTile();
-        Graphics2D g = (Graphics2D)image.getGraphics();
-        g.setColor(Color.LIGHT_GRAY);
-        g.fillOval(4,4,24,24);
+    public ImmovableObjectFactory() throws IOException {
+        image = ImageIO.read(new File("src/main/resources/rock.png"));
+        //image = Tile.createTile();
+
+        //Graphics2D g = (Graphics2D)image.getGraphics();
+        //g.setColor(Color.LIGHT_GRAY);
+        //g.fillOval(4,4,24,24);
     }
 
     public GameObject create() {

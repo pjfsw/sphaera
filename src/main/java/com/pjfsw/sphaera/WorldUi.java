@@ -53,14 +53,13 @@ public class WorldUi implements Drawable {
 
     private void drawWorld(Graphics2D g) {
         Color[] colors = new Color[] {
-            new Color(0x444433),
-            new Color(0x555544),
-            new Color(0x666655)
+            new Color(0x5f5840),
+            new Color(0x3080b0)
         };
         for (int y = 0; y < VERTICAL_TILES; y++) {
             for (int x = 0; x < HORIZONTAL_TILES; x++) {
-                g.setColor(colors[Math.abs(worldX+x+worldY+y)%colors.length]);
-                g.fillRect(x*TILE_SIZE+1, y*TILE_SIZE+1, TILE_SIZE-2, TILE_SIZE-2);
+                g.setColor(colors[world.getTerrainAt(worldX+x,worldY+y)]);
+                g.fillRect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
             }
         }
     }

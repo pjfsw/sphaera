@@ -9,6 +9,8 @@ import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.KeyboardFocusManager;
 import java.awt.image.BufferStrategy;
+import java.io.IOException;
+
 import javax.swing.JFrame;
 import javax.swing.WindowConstants;
 
@@ -17,7 +19,7 @@ public class Sphaera {
     private final JFrame frame;
     private Game game;
 
-    private Sphaera() {
+    private Sphaera() throws IOException {
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         GraphicsDevice[] gs = ge.getScreenDevices();
         GraphicsConfiguration gc = gs[0].getConfigurations()[0];
@@ -82,8 +84,13 @@ public class Sphaera {
     }
 
     public static void main(String[] args) {
-        Sphaera sphaera = new Sphaera();
-        sphaera.run();
+        Sphaera sphaera = null;
+        try {
+            sphaera = new Sphaera();
+            sphaera.run();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }
