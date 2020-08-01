@@ -1,7 +1,9 @@
 package com.pjfsw.sphaera;
 
 import java.awt.Point;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.pjfsw.sphaera.gameobject.FoodObject;
@@ -9,15 +11,19 @@ import com.pjfsw.sphaera.gameobject.GameObject;
 import com.pjfsw.sphaera.gameobject.ImageFactory;
 import com.pjfsw.sphaera.gameobject.ImmovableObject;
 import com.pjfsw.sphaera.gameobject.RockObject;
+import com.pjfsw.sphaera.npc.Npc;
 
 public class World {
-    private static final int IMMOVABLE_OBJECTS = 50000;
+    private static final int IMMOVABLE_OBJECTS = 20000;
     private static final int FOOD_OBJECTS = 5000;
-    private static final int ROCKS = 1000;
+    private static final int ROCKS = 2000;
     private static final int WORLD_SPAN = 1000;
+    private static final int NPCS = 1000;
     private final Map<Integer, Map<Integer, GameObject>> gameObjects = new HashMap<>();
     private final ImageFactory imageFactory;
     private final int[][] terrain;
+    private final List<Npc> npcs = new ArrayList<>();
+
 
     public World(ImageFactory imageFactory) {
         this.imageFactory = imageFactory;
@@ -27,6 +33,7 @@ public class World {
         createImmovableObjects();
         createFoodObjects();
         createRocks();
+        createNpcs();
     }
 
     private void generateTerrain() {
@@ -72,7 +79,7 @@ public class World {
         return terrain[x+WORLD_SPAN][y+WORLD_SPAN];
     }
 
-    Point findEmptySpot() {
+    private Point findEmptySpot() {
         int x;
         int y;
         do {
@@ -101,6 +108,24 @@ public class World {
         for (int i = 0; i < ROCKS; i++) {
             Point spot = findEmptySpot();
             addObject(new RockObject(imageFactory), spot.x, spot.y);
+        }
+    }
+
+    private void createNpcs() {
+        for (int i = 0; i < NPCS; i++) {
+            Point spot = findEmptySpot();
+            Npc npc = new Npc(imageFactory, spot.x, spot.y);
+            npcs.add(npc);
+        }
+    }
+
+    public List<Npc> getNpcs() {
+        return npcs;
+    }
+
+    public void nextTurn() {
+        for (Npc npc : npcs) {
+            npc.move(this);
         }
     }
 

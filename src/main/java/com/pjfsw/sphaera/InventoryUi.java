@@ -12,19 +12,20 @@ import com.pjfsw.sphaera.gameobject.GameObject;
 public class InventoryUi implements Drawable {
     private final Inventory inventory;
     private final Font font;
-    private int selectedIndex;
+    private int selectedIndex = -1;
 
     public InventoryUi(Inventory inventory) {
         this.inventory = inventory;
-        this.selectedIndex = 0;
         font = new Font("Courier New", Font.PLAIN, 9);
+    }
 
+    public void setSelectedIndex(int selectedIndex) {
+        this.selectedIndex = selectedIndex;
     }
 
     @Override
     public void draw(final Graphics2D g) {
         Collection<String> itemTypes = inventory.getItemTypes();
-        //selectedIndex = inventory.getSelectedIndex();
 
         g.setColor(Color.WHITE);
         g.setFont(font);
@@ -42,7 +43,7 @@ public class InventoryUi implements Drawable {
                     TILE_SIZE, TILE_SIZE,
                     null
                 );
-                g.drawString(String.valueOf(items.size()), x + TILE_SIZE, y + TILE_SIZE);
+                g.drawString(String.valueOf(items.size()), x + TILE_SIZE - 8, y + TILE_SIZE);
 
                 if (item == selectedIndex) {
                     g.drawRect(x,y,TILE_SIZE, TILE_SIZE);

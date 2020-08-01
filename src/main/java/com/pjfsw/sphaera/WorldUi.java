@@ -7,6 +7,7 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 
 import com.pjfsw.sphaera.gameobject.GameObject;
+import com.pjfsw.sphaera.npc.Npc;
 
 public class WorldUi implements Drawable {
     private static final int HORIZONTAL_TILES = 9;
@@ -84,6 +85,20 @@ public class WorldUi implements Drawable {
         dayNightCycle = new Color(0, 0, 0, 0);
     }
 
+    private void drawNpcs(Graphics2D g) {
+        for (Npc npc : world.getNpcs()) {
+            int x = npc.x();
+            int y = npc.y();
+            if (x >= worldX
+                && x < worldX+HORIZONTAL_TILES
+                && y >= worldY
+                && y < worldY+VERTICAL_TILES
+            ) {
+                g.drawImage(npc.image(), TILE_SIZE*(x-worldX), TILE_SIZE*(y-worldY), null);
+            }
+        }
+    }
+
     @Override
     public void draw(final Graphics2D g) {
         updateCamera();
@@ -93,6 +108,7 @@ public class WorldUi implements Drawable {
         tg.fillRect(0,0, W, H);
         drawWorld(tg);
         drawObjects(tg);
+        drawNpcs(tg);
         g.drawImage(tileImage, 0,0, W, H, null);
         g.setColor(dayNightCycle);
         g.fillRect(0,0, W, H);
