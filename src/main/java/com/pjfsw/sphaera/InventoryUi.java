@@ -1,7 +1,6 @@
 package com.pjfsw.sphaera;
 
 import static com.pjfsw.sphaera.Tile.TILE_SIZE;
-import static com.pjfsw.sphaera.Ui.SCALE;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -18,32 +17,38 @@ public class InventoryUi implements Drawable {
     public InventoryUi(Inventory inventory) {
         this.inventory = inventory;
         this.selectedIndex = 0;
-        font = new Font("Courier New", Font.PLAIN, 18);
+        font = new Font("Courier New", Font.PLAIN, 9);
 
     }
 
     @Override
     public void draw(final Graphics2D g) {
-        Collection<GameObject> items = inventory.getItems();
-        selectedIndex = inventory.getSelectedIndex();
+        Collection<String> itemTypes = inventory.getItemTypes();
+        //selectedIndex = inventory.getSelectedIndex();
 
         g.setColor(Color.WHITE);
         g.setFont(font);
         g.drawString("Inventory", 0, font.getSize());
 
         int item = 0;
-        for (GameObject go : items) {
-            int x = (item % 9) * TILE_SIZE * SCALE;
-            int y = item / 9 * TILE_SIZE * SCALE + 32;
-            g.drawImage(go.image(),
-                x, y,
-                TILE_SIZE * SCALE, TILE_SIZE * SCALE,
-                null
-            );
-            if (item == selectedIndex) {
-                g.drawRect(x,y,TILE_SIZE * SCALE, TILE_SIZE * SCALE);
+        for (String itemType : itemTypes) {
+            Collection<GameObject> items = inventory.getItems(itemType);
+            if (items.size() > 0) {
+                GameObject go = items.iterator().next();
+                int x = 0;
+                int y = item * TILE_SIZE + 32;
+                g.drawImage(go.image(),
+                    x, y,
+                    TILE_SIZE, TILE_SIZE,
+                    null
+                );
+                g.drawString(String.valueOf(items.size()), x + TILE_SIZE, y + TILE_SIZE);
+
+                if (item == selectedIndex) {
+                    g.drawRect(x,y,TILE_SIZE, TILE_SIZE);
+                }
+                item++;
             }
-            item++;
         }
     }
 }

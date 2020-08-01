@@ -1,35 +1,39 @@
 package com.pjfsw.sphaera;
 
+import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
 import java.io.IOException;
-import java.util.Map;
-
-import com.google.common.collect.ImmutableMap;
 import com.pjfsw.sphaera.gameobject.FoodObject;
 import com.pjfsw.sphaera.gameobject.GameObject;
+import com.pjfsw.sphaera.gameobject.ImageFactory;
 import com.pjfsw.sphaera.gameobject.InventoryObject;
 
 public class Game {
     private final Player player;
     private final World world;
     private final Inventory inventory;
+    private final WorldUi worldUi;
+    private final InventoryUi inventoryUi;
+    private final HudUi hudUi;
     private GameState state;
-    private final Map<GameState, Drawable> drawables;
+    private final GameTime gameTime;
 
     public Game() throws IOException {
         state = GameState.IN_GAME;
         player = new Player();
-        world = new World(player);
+        ImageFactory imageFactory = new ImageFactory();
+        world = new World(imageFactory);
+        worldUi = new WorldUi(player, world);
         inventory = new Inventory();
-
-        drawables = ImmutableMap.<GameState, Drawable>builder()
-            .put(GameState.IN_GAME, new WorldUi(player, world))
-            .put(GameState.INVENTORY, new InventoryUi(inventory))
-            .build();
+        inventoryUi = new InventoryUi(inventory);
+        gameTime = new GameTime();
+        hudUi = new HudUi(player, gameTime);
     }
 
-    public Drawable getDrawable() {
-        return drawables.get(state);
+
+    private void nextTurn() {
+        gameTime.advanceTime();
+        worldUi.createDayNightCycle(gameTime.getTime());
     }
 
     private void move(int x, int y) {
@@ -42,13 +46,12 @@ public class Game {
         if (object == null) {
             player.moveTo(player.x() + x, player.y() + y);
             player.consumeEnergy(1);
-            world.nextTurn();
+            nextTurn();
         } else if (object instanceof InventoryObject) {
             inventory.add(object);
             world.removeObject(newX, newY);
             player.moveTo(player.x() + x, player.y() +y);
-
-            world.nextTurn();
+            nextTurn();
         }
     }
 
@@ -105,14 +108,14 @@ public class Game {
             case IN_GAME:
                 return handleInGameKeyEvent(event);
             case INVENTORY:
-                if (inventory.handleKeyEvent(event)) {
+                /*if (inventory.handleKeyEvent(event)) {
                     return true;
-                }
+                }*/
                 if (Input.isInventory(event)) {
                     state = GameState.IN_GAME;
                     return true;
                 }
-                if (Input.isConsume(event)) {
+                /*if (Input.isConsume(event)) {
                     GameObject go = inventory.getSelectedObject();
                     if (go instanceof InventoryObject && ((InventoryObject)go).getEnergy() > 0) {
                         consume(inventory.removeSelectedObject());
@@ -120,9 +123,18 @@ public class Game {
                         return true;
                     }
 
-                }
+                }*/
                 break;
         }
         return false;
+    }
+
+    public void draw(Graphics2D g) {
+        g.scale(2,2);
+        worldUi.draw(g);
+        g.translate(WorldUi.W, 0);
+        inventoryUi.draw(g);
+        g.translate(-WorldUi.W, WorldUi.H+1);
+        hudUi.draw(g);
     }
 }

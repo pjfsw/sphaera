@@ -82,4 +82,9 @@ public class Player implements GameObject {
     public BufferedImage image() {
         return image;
     }
+
+    @Override
+    public String getName() {
+        return "player";
+    }
 }

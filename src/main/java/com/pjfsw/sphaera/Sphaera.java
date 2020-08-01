@@ -72,7 +72,7 @@ public class Sphaera {
                     graphics.setColor(Color.BLACK);
                     graphics.fillRect(0,0,frame.getWidth(),frame.getHeight());
                     graphics.translate(0, frame.getInsets().top);
-                    game.getDrawable().draw((Graphics2D)graphics);
+                    game.draw((Graphics2D)graphics);
                     graphics.dispose();
                 } while (strategy.contentsRestored());
                 strategy.show();

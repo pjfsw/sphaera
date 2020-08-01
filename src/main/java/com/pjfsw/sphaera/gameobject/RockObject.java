@@ -2,14 +2,13 @@ package com.pjfsw.sphaera.gameobject;
 
 import java.awt.image.BufferedImage;
 
-public class FoodObject implements GameObject, InventoryObject {
+public class RockObject implements GameObject, InventoryObject {
     private final BufferedImage image;
-    private final int energy;
-    public static final String NAME = "food";
 
-    public FoodObject(ImageFactory imageFactory, int energy) {
+    public static final String NAME = "rock";
+
+    public RockObject(ImageFactory imageFactory) {
         this.image = imageFactory.get(NAME);
-        this.energy = energy;
     }
 
     @Override
@@ -24,6 +23,9 @@ public class FoodObject implements GameObject, InventoryObject {
 
     @Override
     public int getEnergy() {
-        return energy;
+        return 0;
     }
+
+
+
 }
