@@ -172,11 +172,11 @@ public class Derp3d  {
             if (d > MAX_DISTANCE || d < 0.1) {
                 continue;
             }
-            int v = (int)(2000 / distances[i]);
+            int v = (int)(2500 / distances[i]);
             if (v > 255) {
                 v = 255;
             }
-            g.setColor(new Color(128+v/2, 128+v/2, 128+v/2));
+            g.setColor(new Color(v, v, v));
             g.drawLine(i, -v/2, i, v/2);
 
         }
@@ -225,6 +225,19 @@ public class Derp3d  {
                     || cy >= grid.length) {
                     run = false;
                 } else if (grid[cy][cx] == 1) {
+                    //if (Math.abs(rxStep) > Math.abs(ryStep)) {
+                        if (rxStep > 0) {
+                            px = cx * TILE_SIZE;
+                        } else {
+                            px = (cx+1) * TILE_SIZE-1;
+                        }
+                    /*} else {
+                        if (ryStep > 0) {
+                            py = cy * TILE_SIZE;
+                        } else {
+                            py =  (cy+1) * TILE_SIZE - 1;
+                        }
+                    }*/
                     run = false;
                 } else {
                     steps++;
