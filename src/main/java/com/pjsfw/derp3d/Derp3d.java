@@ -27,16 +27,16 @@ public class Derp3d  {
     private static final int TILE_SIZE = 32;
     private static final double RAY_STEPPING = 0.1;
     private static final double MOVE_SPEED = 0.02;
-    private static final double FOV = 80.0 * Math.PI / 180.0;
+    private static final double FOV = 75.0 * Math.PI / 180.0;
     private static final double HALF_FOV = FOV / 2.0;
-    private static final int RAYS = 320;
+    private static final int RAYS = 256;
     private static final Color rayColor = new Color(255,0,0,127);
     private static final Color rayColor2 = new Color(0,255,0,127);
     private final double[] rays = new double[RAYS];
     private final double[] distances = new double[RAYS];
     private final double[] rx = new double[RAYS];
     private final double[] ry = new double[RAYS];
-    private static final int MAX_RAY = 3000;
+    private static final int MAX_RAY = 200;
     private static final double MAX_DISTANCE = 20000;
 
     private boolean moveUp = false;
@@ -54,6 +54,7 @@ public class Derp3d  {
         "1000100011111001",
         "1000000000000001",
         "1000000000000001",
+        "1000000000100001",
         "1000000000100001",
         "1111111111111111"
         );
@@ -77,7 +78,7 @@ public class Derp3d  {
 
 
         frame = new JFrame(gc);
-        frame.setPreferredSize(new Dimension(1024,600));
+        frame.setPreferredSize(new Dimension(1024,384));
         frame.setTitle("Derp3d");
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.pack();
@@ -169,20 +170,26 @@ public class Derp3d  {
             g.drawLine(playerX, playerY, playerX + (int)(TILE_SIZE * rsq * rx[i]), playerY + (int)(TILE_SIZE * rsq * ry[i]));
         }
 
-        g.translate(512,128);
+        g.translate(512,192);
+        g.setColor(Color.GRAY);
+        g.drawRect(0,-192,512,383);
+        g.scale(2,2);
         g.setColor(Color.WHITE);
         for (int i = 0; i < RAYS; i++) {
             double d = distances[i] > 0 ? distances[i] : 0;
             if (d > MAX_DISTANCE || d < 0.1) {
                 continue;
             }
-            int v = (int)(100 / distances[i]);
-            if (v > 255) {
-                v = 255;
+            int v = (int)(96 / distances[i]);
+            if (v > 191) {
+                v = 191;
             }
-            int c = (int)(200 / distances[i]);
+            int c = (int)(255-20.0*distances[i]);
             if (c > 255) {
                 c = 255;
+            }
+            if (c < 0) {
+                c = 0;
             }
             g.setColor(new Color(c,c,c));
             g.drawLine(i, -v/2, i, v/2);
