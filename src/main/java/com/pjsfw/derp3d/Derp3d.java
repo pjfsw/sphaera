@@ -25,19 +25,18 @@ import com.google.common.collect.ImmutableList;
 public class Derp3d  {
     private final JFrame frame;
     private static final int TILE_SIZE = 32;
-    private static final double RAY_STEPPING = TILE_SIZE/8.0;
-    private static final double MOVE_SPEED = 0.5;
+    private static final double RAY_STEPPING = 0.1;
+    private static final double MOVE_SPEED = 0.02;
     private static final double FOV = 80.0 * Math.PI / 180.0;
     private static final double HALF_FOV = FOV / 2.0;
     private static final int RAYS = 320;
-    private static  final Color rayColor = new Color(255,0,0,127);
-    private int rays[] = new int[RAYS];
-    private double distances[] = new double[RAYS];
-    private double rx[] = new double[RAYS];
-    private double ry[] = new double[RAYS];
-    private int rgx[] = new int[RAYS];
-    private int rgy[] = new int[RAYS];
-    private static final int MAX_RAY = 300;
+    private static final Color rayColor = new Color(255,0,0,127);
+    private static final Color rayColor2 = new Color(0,255,0,127);
+    private final double[] rays = new double[RAYS];
+    private final double[] distances = new double[RAYS];
+    private final double[] rx = new double[RAYS];
+    private final double[] ry = new double[RAYS];
+    private static final int MAX_RAY = 3000;
     private static final double MAX_DISTANCE = 20000;
 
     private boolean moveUp = false;
@@ -60,8 +59,8 @@ public class Derp3d  {
         );
 
     private int[][] grid;
-    private double mx = 50;
-    private double my = 50;
+    private double mx = 2;
+    private double my = 2;
     private double lastX = 0;
     private double angle = 0;
     private double dx;
@@ -157,8 +156,8 @@ public class Derp3d  {
         }
 
         g.setColor(Color.RED);
-        int playerX = (int)mx;
-        int playerY = (int)my;
+        int playerX = (int)(mx * TILE_SIZE);
+        int playerY = (int)(my * TILE_SIZE);
         g.drawOval(playerX-2,playerY-2, 4,4);
 
         //g.drawLine(playerX, playerY, playerX + (int)(dx * 25), playerY + (int)(dy * 25));
@@ -166,9 +165,8 @@ public class Derp3d  {
         g.setColor(rayColor);
 
         for (int i = 0; i < RAYS; i++) {
-            //g.fillRect(rgx[i]*TILE_SIZE,rgy[i]*TILE_SIZE, TILE_SIZE, TILE_SIZE);
             double rsq = rays[i];
-            g.drawLine(playerX, playerY, playerX + (int)(rsq * rx[i]), playerY + (int)(rsq * ry[i]));
+            g.drawLine(playerX, playerY, playerX + (int)(TILE_SIZE * rsq * rx[i]), playerY + (int)(TILE_SIZE * rsq * ry[i]));
         }
 
         g.translate(512,128);
@@ -178,11 +176,11 @@ public class Derp3d  {
             if (d > MAX_DISTANCE || d < 0.1) {
                 continue;
             }
-            int v = (int)(2500 / distances[i]);
+            int v = (int)(100 / distances[i]);
             if (v > 255) {
                 v = 255;
             }
-            int c = (int)(6000 / distances[i]);
+            int c = (int)(200 / distances[i]);
             if (c > 255) {
                 c = 255;
             }
@@ -234,8 +232,8 @@ public class Derp3d  {
             double px = mx;
             double py = my;
 
-            int cx  = (int)(px / TILE_SIZE);
-            int cy = (int)(py/TILE_SIZE);
+            int cx  = (int)px;
+            int cy = (int)py;
             int oldCx = cx;
             int oldCy = cy;
 
@@ -250,26 +248,36 @@ public class Derp3d  {
                 } else if (grid[cy][cx] == 1) {
                     double oldPx = px - rxStep;
                     double oldPy = py - ryStep;
+                    double diffX = 0;
+                    double diffY = 0;
+                    double newX = px;
+                    double newY = py;
+
                     if (cx > oldCx) {
-                        // left wall
-                        px = cx * TILE_SIZE;
-                        double diffX = px - oldPx;
-                        py = oldPy + ryStep * diffX / rxStep;
+                        newX = cx;
+                        diffX = newX - oldPx;
                     } else if (cx < oldCx) {
-                        // right wall
-                        px = (cx+1) * TILE_SIZE-1;
-                        double diffX = px - oldPx;
-                        py = oldPy + ryStep * diffX / rxStep;
-                    } else if (cy > oldCy) {
-                        // top wall
-                        py = cy * TILE_SIZE;
-                        double diffY = py - oldPy;
-                        px = oldPx + rxStep * diffY / ryStep;
+                        newX = cx + 1;
+                        diffX = newX - oldPx;
+                    } else {
+                        diffX = 0;
+                    }
+                    if (cy > oldCy) {
+                        newY = cy;
+                        diffY = newY - oldPy;
                     } else if (cy < oldCy) {
-                        // bottom wall
-                        py =  (cy+1) * TILE_SIZE - 1;
-                        double diffY = py - oldPy;
+                        newY = cy + 1;
+                        diffY = newY - oldPy;
+                    } else {
+                        diffY = 0;
+                    }
+
+                    if (Math.abs(diffX) > Math.abs(diffY)) {
+                        px = newX;
+                        py = oldPy + ryStep * diffX / rxStep;
+                    } else {
                         px = oldPx + rxStep * diffY / ryStep;
+                        py = newY;
                     }
                     run = false;
                 } else {
@@ -280,15 +288,13 @@ public class Derp3d  {
                 }
                 oldCx = cx;
                 oldCy = cy;
-                cx  = (int)(px / TILE_SIZE);
-                cy = (int)(py/TILE_SIZE);
+                cx = (int)px;
+                cy = (int)py;
             } while (steps < MAX_RAY && run);
             double diffX = px-mx;
             double diffY = py-my;
             double distance = Math.sqrt(diffX*diffX + diffY*diffY);
-            rays[i] = (int)distance;
-            rgx[i] = (int)(px/TILE_SIZE);
-            rgy[i] = (int)(py/TILE_SIZE);
+            rays[i] = distance;
             if (steps < MAX_RAY) {
                 double correction = Math.cos(Math.abs(rayAngleFromCentre));
                 //System.out.println(correction);
@@ -305,8 +311,8 @@ public class Derp3d  {
         dy = Math.sin(angle);
         ndx = Math.cos(angle+Math.PI/2);
         ndy = Math.sin(angle+Math.PI/2);
-        gridX = (int)(mx / TILE_SIZE);
-        gridY = (int)(my / TILE_SIZE);
+        gridX = (int)mx;
+        gridY = (int)my;
         castRays();
     }
 
