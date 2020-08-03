@@ -1,6 +1,6 @@
 package com.pjsfw.derp3d;
 
-import static java.awt.event.KeyEvent.KEY_PRESSED;
+import static java.awt.event.KeyEvent.KEY_RELEASED;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -25,7 +25,8 @@ import com.google.common.collect.ImmutableList;
 public class Derp3d  {
     private final JFrame frame;
     private static final int TILE_SIZE = 32;
-    private static final double MOVE_SPEED = 3.0;
+    private static final double RAY_STEPPING = TILE_SIZE/8.0;
+    private static final double MOVE_SPEED = 0.5;
     private static final double FOV = 80.0 * Math.PI / 180.0;
     private static final double HALF_FOV = FOV / 2.0;
     private static final int RAYS = 320;
@@ -39,14 +40,19 @@ public class Derp3d  {
     private static final int MAX_RAY = 300;
     private static final double MAX_DISTANCE = 20000;
 
+    private boolean moveUp = false;
+    private boolean moveDown = false;
+    private boolean moveLeft = false;
+    private boolean moveRight = false;
+
     private List<String> map = ImmutableList.of(
         "1111111111111111",
         "1000000000000001",
-        "1000000000000001",
-        "1000010000000001",
-        "1000010000000001",
-        "1000010000000001",
-        "1000100011110001",
+        "1000000000111101",
+        "1000010000100001",
+        "1000010000100001",
+        "1000010000100001",
+        "1000100011111001",
         "1000000000000001",
         "1000000000000001",
         "1000000000100001",
@@ -176,9 +182,23 @@ public class Derp3d  {
             if (v > 255) {
                 v = 255;
             }
-            g.setColor(new Color(v, v, v));
+            int c = (int)(6000 / distances[i]);
+            if (c > 255) {
+                c = 255;
+            }
+            g.setColor(new Color(c,c,c));
             g.drawLine(i, -v/2, i, v/2);
 
+        }
+        if (moveLeft) {
+            moveLeft();
+        } else if (moveRight) {
+            moveRight();
+        }
+        if (moveUp) {
+            moveForward();
+        } else if (moveDown) {
+            moveBackward();
         }
 
         updateAngle(MouseInfo.getPointerInfo().getLocation());
@@ -208,36 +228,49 @@ public class Derp3d  {
             double rayAngle = rayAngleFromCentre + angle;
             rx[i] = Math.cos(rayAngle);
             ry[i] = Math.sin(rayAngle);
-            double rxStep = rx[i];
-            double ryStep = ry[i];
+            double rxStep = rx[i] * RAY_STEPPING;
+            double ryStep = ry[i] * RAY_STEPPING;
             rays[i] =  MAX_RAY;
             double px = mx;
             double py = my;
 
+            int cx  = (int)(px / TILE_SIZE);
+            int cy = (int)(py/TILE_SIZE);
+            int oldCx = cx;
+            int oldCy = cy;
+
             int steps = 0;
             boolean run = true;
             do {
-                int cx  = (int)(px / TILE_SIZE);
-                int cy = (int)(py/TILE_SIZE);
                 if (cx < 0
                     || cx >= grid[0].length
                     || cy < 0
                     || cy >= grid.length) {
                     run = false;
                 } else if (grid[cy][cx] == 1) {
-                    //if (Math.abs(rxStep) > Math.abs(ryStep)) {
-                        if (rxStep > 0) {
-                            px = cx * TILE_SIZE;
-                        } else {
-                            px = (cx+1) * TILE_SIZE-1;
-                        }
-                    /*} else {
-                        if (ryStep > 0) {
-                            py = cy * TILE_SIZE;
-                        } else {
-                            py =  (cy+1) * TILE_SIZE - 1;
-                        }
-                    }*/
+                    double oldPx = px - rxStep;
+                    double oldPy = py - ryStep;
+                    if (cx > oldCx) {
+                        // left wall
+                        px = cx * TILE_SIZE;
+                        double diffX = px - oldPx;
+                        py = oldPy + ryStep * diffX / rxStep;
+                    } else if (cx < oldCx) {
+                        // right wall
+                        px = (cx+1) * TILE_SIZE-1;
+                        double diffX = px - oldPx;
+                        py = oldPy + ryStep * diffX / rxStep;
+                    } else if (cy > oldCy) {
+                        // top wall
+                        py = cy * TILE_SIZE;
+                        double diffY = py - oldPy;
+                        px = oldPx + rxStep * diffY / ryStep;
+                    } else if (cy < oldCy) {
+                        // bottom wall
+                        py =  (cy+1) * TILE_SIZE - 1;
+                        double diffY = py - oldPy;
+                        px = oldPx + rxStep * diffY / ryStep;
+                    }
                     run = false;
                 } else {
                     steps++;
@@ -245,6 +278,10 @@ public class Derp3d  {
                     py += ryStep;
                     // TODO correct "holes"
                 }
+                oldCx = cx;
+                oldCy = cy;
+                cx  = (int)(px / TILE_SIZE);
+                cy = (int)(py/TILE_SIZE);
             } while (steps < MAX_RAY && run);
             double diffX = px-mx;
             double diffY = py-my;
@@ -298,24 +335,20 @@ public class Derp3d  {
     }
 
     private boolean handleKeyEvent(KeyEvent event) {
-        if (event.getID() != KEY_PRESSED) {
-            return false;
-        }
-
         if (event.getKeyChar() == 'w') {
-            moveForward();
+            moveUp = event.getID() != KEY_RELEASED;
             return true;
         }
         if (event.getKeyChar() == 's') {
-            moveBackward();
+            moveDown = event.getID() != KEY_RELEASED;
             return true;
         }
         if (event.getKeyChar() == 'a') {
-            moveLeft();
+            moveLeft = event.getID() != KEY_RELEASED;
             return true;
         }
         if (event.getKeyChar() == 'd') {
-            moveRight();
+            moveRight = event.getID() != KEY_RELEASED;
             return true;
         }
         return false;
