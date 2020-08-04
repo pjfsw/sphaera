@@ -26,7 +26,7 @@ public class Derp3d  {
     private final JFrame frame;
     private static final int TILE_SIZE = 24;
     private static final double MOVE_SPEED = 0.02;
-    private static final double FOV = 75.0 * Math.PI / 180.0;
+    private static final double FOV = 85.0 * Math.PI / 180.0;
     private static final double HALF_FOV = FOV / 2.0;
     private static final int RAYS = 320;
     private static final int W = RAYS;
@@ -34,11 +34,12 @@ public class Derp3d  {
     private static final Color rayColor = new Color(255,0,0,127);
     private final double[] rays = new double[RAYS];
     private final double[] distances = new double[RAYS];
-    private final int[] sides = new int[RAYS];
+    private final boolean[] sides = new boolean[RAYS];
     private final double[] rx = new double[RAYS];
     private final double[] ry = new double[RAYS];
     private static final int MAX_RAY = 200;
     private static final double MAX_DISTANCE = 20000;
+    private static final double CLOSE_DISTANCE = 0.3;
 
     private final Color[] colors1 = new Color[256];
     private final Color[] colors2 = new Color[256];
@@ -186,10 +187,10 @@ public class Derp3d  {
         g.drawRect(0,-H/2,W,H);
         for (int i = 0; i < RAYS; i++) {
             double d = distances[i] > 0 ? distances[i] : 0;
-            if (d > MAX_DISTANCE || d < 0.1) {
+            if (d > MAX_DISTANCE || d < 0.02) {
                 continue;
             }
-            int v = (int)(96 / distances[i]);
+            int v = (int)(H / distances[i]);
             if (v > H-1) {
                 v = H-1;
             }
@@ -201,10 +202,10 @@ public class Derp3d  {
                 c = 0;
             }
             g.setColor(Color.WHITE);
-            if (sides[i] == 0) {
-                g.setColor(colors1[c]);
-            } else {
+            if (sides[i]) {
                 g.setColor(colors2[c]);
+            } else {
+                g.setColor(colors1[c]);
             }
             g.drawLine(i, -v/2, i, v/2);
 
@@ -241,6 +242,65 @@ public class Derp3d  {
         }
     }
 
+    private double castRay(double rx, double ry) {
+
+        int mapX = (int)mx;
+        int mapY = (int)my;
+
+
+        double deltaDistX = Math.abs(1.0 / rx);
+        double deltaDistY = Math.abs(1.0 / ry);
+
+        int stepX;
+        int stepY;
+        double sideDistX;
+        double sideDistY;
+
+        if (rx < 0) {
+            stepX = -1;
+            sideDistX = (mx-(double)mapX) * deltaDistX;
+        } else {
+            stepX = 1;
+            sideDistX = ((double)mapX + 1.0 - mx) * deltaDistX;
+        }
+        if (ry < 0) {
+            stepY = -1;
+            sideDistY = (my-(double)mapY) * deltaDistY;
+        } else {
+            stepY = 1;
+            sideDistY = ((double)mapY + 1.0 - my) * deltaDistY;
+        }
+
+        boolean hit = false;
+        int steps = 0;
+        int side = 0;
+        while (!hit && steps < MAX_RAY) {
+            if (sideDistX < sideDistY) {
+                sideDistX += deltaDistX;
+                mapX += stepX;
+                side = 0;
+            } else {
+                sideDistY += deltaDistY;
+                mapY += stepY;
+                side = 1;
+            }
+            hit = grid[mapY][mapX] > 0;
+            steps++;
+        }
+
+        double distance;
+
+        if (side == 0) {
+            int d = (1 - stepX) / 2;
+            distance = (mapX - mx + (double)d)/rx;
+        } else {
+            int d = (1 - stepY) / 2;
+            distance = (mapY - my + (double)d)/ry;
+            distance = -distance;
+        }
+        return distance;
+    }
+
     private void castRays() {
         for (int i = 0; i < RAYS; i++) {
             double rayAngleFromCentre = getRayAngleFromCentre(i);
@@ -249,70 +309,13 @@ public class Derp3d  {
             ry[i] = Math.sin(rayAngle);
             rays[i] =  MAX_RAY;
 
-            int mapX = (int)mx;
-            int mapY = (int)my;
+            double distance = castRay(rx[i], ry[i]);
 
-
-            double deltaDistX = Math.abs(1.0 / rx[i]);
-            double deltaDistY = Math.abs(1.0 / ry[i]);
-
-            int stepX;
-            int stepY;
-            double sideDistX;
-            double sideDistY;
-
-            if (rx[i] < 0) {
-                stepX = -1;
-                sideDistX = (mx-(double)mapX) * deltaDistX;
-            } else {
-                stepX = 1;
-                sideDistX = ((double)mapX + 1.0 - mx) * deltaDistX;
-            }
-            if (ry[i] < 0) {
-                stepY = -1;
-                sideDistY = (my-(double)mapY) * deltaDistY;
-            } else {
-                stepY = 1;
-                sideDistY = ((double)mapY + 1.0 - my) * deltaDistY;
-            }
-
-            boolean hit = false;
-            int steps = 0;
-            int side = 0;
-            while (!hit && steps < MAX_RAY) {
-                if (sideDistX < sideDistY) {
-                    sideDistX += deltaDistX;
-                    mapX += stepX;
-                    side = 0;
-                } else {
-                    sideDistY += deltaDistY;
-                    mapY += stepY;
-                    side = 1;
-                }
-                hit = grid[mapY][mapX] > 0;
-                steps++;
-            }
-
-            double distance;
-
-            if (side == 0) {
-                int d = (1 - stepX) / 2;
-                distance = (mapX - mx + (double)d)/rx[i];
-            } else {
-                int d = (1 - stepY) / 2;
-                distance = (mapY - my + (double)d)/ry[i];
-            }
-
-
+            sides[i] = distance < 0;
+            distance = Math.abs(distance);
             rays[i] = distance;
-            sides[i]= side;
-            if (steps < MAX_RAY) {
-                double correction = Math.cos(Math.abs(rayAngleFromCentre));
-                distances[i] = distance * correction;
-            } else {
-                distances[i] = MAX_DISTANCE+1.0;
-
-            }
+            double correction = Math.cos(Math.abs(rayAngleFromCentre));
+            distances[i] = distance * correction;
         }
     }
 
@@ -328,24 +331,29 @@ public class Derp3d  {
         castRays();
     }
 
+    private void maybeMove(double dirX, double dirY) {
+        double movementX = Math.abs(castRay(dirX, 0));
+        double movementY = Math.abs(castRay(0,dirY));
+        if (movementX > CLOSE_DISTANCE && movementY > CLOSE_DISTANCE) {
+            mx += MOVE_SPEED * dirX;
+            my += MOVE_SPEED * dirY;
+        }
+    }
+
     private void moveForward() {
-        mx += (MOVE_SPEED*dx);
-        my += (MOVE_SPEED*dy);
+        maybeMove(dx,dy);
     }
 
     private void moveBackward() {
-        mx -= (MOVE_SPEED*dx);
-        my -= (MOVE_SPEED*dy);
+        maybeMove(-dx, -dy);
     }
 
     private void moveLeft() {
-        mx -= (MOVE_SPEED*ndx);
-        my -= (MOVE_SPEED*ndy);
+        maybeMove(-ndx, -ndy);
     }
 
     private void moveRight() {
-        mx += (MOVE_SPEED*ndx);
-        my += (MOVE_SPEED*ndy);
+        maybeMove(ndx, ndy);
     }
 
     private boolean handleKeyEvent(KeyEvent event) {
@@ -375,5 +383,4 @@ public class Derp3d  {
             e.printStackTrace();
         }
     }
-
 }
