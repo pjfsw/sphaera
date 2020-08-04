@@ -14,9 +14,12 @@ import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferStrategy;
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
+import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.WindowConstants;
 
@@ -30,7 +33,7 @@ public class Derp3d  {
     private static final double HALF_FOV = FOV / 2.0;
     private static final int RAYS = 320;
     private static final int W = RAYS;
-    private static final int H = W * 3 / 4;
+    private static final int H = 200;
     private static final Color rayColor = new Color(255,0,0,127);
     private final double[] rays = new double[RAYS];
     private final double[] distances = new double[RAYS];
@@ -40,10 +43,7 @@ public class Derp3d  {
     private static final int MAX_RAY = 200;
     private static final double MAX_DISTANCE = 20000;
     private static final double CLOSE_DISTANCE = 0.3;
-    private static final int TEXTURE_WIDTH = 8;
-
-    private final Color[] colors1 = new Color[256];
-    private final Color[] colors2 = new Color[256];
+    private static final int TEXTURE_SIZE = 32;
 
     private boolean moveUp = false;
     private boolean moveDown = false;
@@ -69,44 +69,31 @@ public class Derp3d  {
     private double mx = 2;
     private double my = 2;
     private double lastX = 0;
-    private double angle = 0;
+    private double angle = Math.PI/2;
     private double dx;
     private double dy;
     private double ndx;
     private double ndy;
     private int gridX;
     private int gridY;
-    private int[] textureX = new int[RAYS];
+    private final int[] textureX = new int[RAYS];
 
-    private Color[][] texture = new Color[][] { {
-        new Color(31,91,91),
-        new Color(31,121,121),
-        new Color(31,91,91),
-        new Color(31,121,121),
-        new Color(31,91,91),
-        new Color(31,121,121),
-        new Color(31,91,91),
-        new Color(31,121,121),
-    }, {
-        new Color(31,0,31),
-        new Color(63,0,63),
-        new Color(97,0,97),
-        new Color(120,0,120),
-        new Color(140,0,140),
-        new Color(120,0,120),
-        new Color(97,0,97),
-        new Color(63,0,63),
-    }};
-
+    private final Color[] opacity = new Color[256];
     private int side;
     private int textureIndex;
-    private int[] rayTextures = new int[RAYS];
+    private final int[] rayTextures = new int[RAYS];
+
+    private final BufferedImage[] texture1 = new BufferedImage[TEXTURE_SIZE];
 
     private Derp3d() throws IOException {
+        loadTextures();
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         GraphicsDevice[] gs = ge.getScreenDevices();
         GraphicsConfiguration gc = gs[0].getConfigurations()[0];
 
+        for (int i =0 ; i < 256; i++) {
+            opacity[i] = new Color(0,0,0,255-i);
+        }
 
         frame = new JFrame(gc);
         frame.setPreferredSize(new Dimension(1026,H*2+2));
@@ -124,11 +111,15 @@ public class Derp3d  {
 
         createGrid();
 
-        for (int i = 0; i < 256; i++) {
-            int intensity = i;
-            colors1[i] = new Color(intensity,intensity,intensity);
-            intensity = 200 * i / 256;
-            colors2[i] = new Color(intensity,intensity,intensity);
+    }
+
+    private void loadTextures() throws IOException {
+        BufferedImage rock = ImageIO.read(new File("src/main/resources/rock.png"));
+            for (int x = 0; x < TEXTURE_SIZE; x++) {
+                texture1[x] = new BufferedImage(1, TEXTURE_SIZE, BufferedImage.TYPE_INT_ARGB);
+                for (int y = 0; y < TEXTURE_SIZE; y++) {
+                    texture1[x].setRGB(0,y, rock.getRGB(x,y));
+                }
         }
     }
 
@@ -166,6 +157,7 @@ public class Derp3d  {
 
         long WAIT_PERIOD = 1_000_000_000 / 60; // TODO get monitor refresh rate
 
+        lastX = MouseInfo.getPointerInfo().getLocation().getX();
         long ticks = System.nanoTime();
         while (true) {
             do {
@@ -229,15 +221,17 @@ public class Derp3d  {
             if (v > H-1) {
                 v = H-1;
             }
-            int c = (int)(255-24.0*distances[i]);
+            int c = (int)(255-20.0*distances[i]);
             if (c > 255) {
                 c = 255;
             }
             if (c < 0) {
                 c = 0;
             }
-            g.setColor(texture[rayTextures[i]][textureX[i]]);
-            g.drawLine(i, -v/2, i, v/2);
+            //Color cl = texture[rayTextures[i]][textureX[i]];
+            g.drawImage(texture1[textureX[i]], i, -v/2, 1, v, null);
+            g.setColor(opacity[c]);
+            g.fillRect(i, -v/2, 1, v);
 
         }
         updateAngle(MouseInfo.getPointerInfo().getLocation());
@@ -261,7 +255,7 @@ public class Derp3d  {
     }
 
     private void updateAngle(final Point location) {
-        double movement = (location.getX() - lastX)/15.0;
+        double movement = (location.getX() - lastX)/30.0;
         lastX = location.getX();
         angle += movement;
         if (angle < 0) {
@@ -355,13 +349,13 @@ public class Derp3d  {
             wallX -= Math.floor(wallX);
 
             //x coordinate on the texture
-            textureX[i] = (int)(wallX * (double)TEXTURE_WIDTH);
+            textureX[i] = (int)(wallX * (double)TEXTURE_SIZE);
 
             if (side == 0 && rx[i] > 0) {
-                textureX[i] = TEXTURE_WIDTH - textureX[i] - 1;
+                textureX[i] = TEXTURE_SIZE - textureX[i] - 1;
             }
             if (side == 1 && ry[i] < 0)  {
-                textureX[i] = TEXTURE_WIDTH - textureX[i] - 1;
+                textureX[i] = TEXTURE_SIZE - textureX[i] - 1;
             }
 
             sides[i] = side == 1;
@@ -436,4 +430,16 @@ public class Derp3d  {
             e.printStackTrace();
         }
     }
+    private static class Rgb {
+            public int r;
+            public int g;
+            public int b;
+
+            public Rgb(int r, int g, int b) {
+                this.r = r;
+                this.g = g;
+                this.b = b;
+            }
+    }
+
 }
