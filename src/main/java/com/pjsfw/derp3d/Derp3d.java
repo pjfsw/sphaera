@@ -27,8 +27,9 @@ import com.google.common.collect.ImmutableList;
 
 public class Derp3d  {
     private final JFrame frame;
-    private static final int TILE_SIZE = 24;
-    private static final double MOVE_SPEED = 0.03;
+    private static final int TILE_SIZE = 16;
+    private static final double MOVE_SPEED = 3;
+    private static final double ROTATE_SPEED = 0.8;
     private static final double FOV = 85.0 * Math.PI / 180.0;
     private static final double HALF_FOV = FOV / 2.0;
     private static final int RAYS = 320;
@@ -37,32 +38,51 @@ public class Derp3d  {
     private static final Color rayColor = new Color(255,0,0,127);
     private final double[] rays = new double[RAYS];
     private final double[] distances = new double[RAYS];
-    private final boolean[] sides = new boolean[RAYS];
     private final double[] rx = new double[RAYS];
     private final double[] ry = new double[RAYS];
     private static final int MAX_RAY = 200;
     private static final double MAX_DISTANCE = 20000;
     private static final double CLOSE_DISTANCE = 0.3;
-    private static final int TEXTURE_SIZE = 32;
 
+    private static final Color shineColor = new Color(0,0,0,191);
     private boolean moveUp = false;
     private boolean moveDown = false;
     private boolean moveLeft = false;
     private boolean moveRight = false;
 
     private List<String> map = ImmutableList.of(
-        "2222222222222222",
-        "2000000000000002",
-        "2000000000111102",
-        "2000010000100002",
-        "2000010000100002",
-        "2000010000100002",
-        "2000100011111002",
-        "2000000000000002",
-        "2000000000000002",
-        "2000000000100002",
-        "2000000000100002",
-        "2222222222222222"
+        "2222222222222222222",
+        "2000000000000000002",
+        "2000000000002222002",
+        "2000000200000012002",
+        "2000000200000000002",
+        "2222001200000200002",
+        "2000002200022122002",
+        "2000000000000000002",
+        "2000002000022222002",
+        "2000001000022112002",
+        "2000000000000000002",
+        "2000000000000000222",
+        "2222222222222000002",
+        "2000000000000020002",
+        "2000000222200020002",
+        "2000000000200000002",
+        "2220010000222221122",
+        "2112000000000000002",
+        "2000000000000200002",
+        "2000222222222100002",
+        "2000000000000211112",
+        "2222200222211222222",
+        "2100200200000200002",
+        "2000200200000200002",
+        "2000200200000000002",
+        "2000000000000000002",
+        "2222222222222002222",
+        "2000002000002002002",
+        "2000002000002002002",
+        "2000000000000000012",
+        "2000000001010101012",
+        "2222222222222222222"
         );
 
     private int[][] grid;
@@ -83,7 +103,8 @@ public class Derp3d  {
     private int textureIndex;
     private final int[] rayTextures = new int[RAYS];
 
-    private final BufferedImage[] texture1 = new BufferedImage[TEXTURE_SIZE];
+    private final BufferedImage[][] textures = new BufferedImage[2][];
+    private double deltaTime;
 
     private Derp3d() throws IOException {
         loadTextures();
@@ -91,12 +112,12 @@ public class Derp3d  {
         GraphicsDevice[] gs = ge.getScreenDevices();
         GraphicsConfiguration gc = gs[0].getConfigurations()[0];
 
-        for (int i =0 ; i < 256; i++) {
+        for (int i = 0 ; i < 256; i++) {
             opacity[i] = new Color(0,0,0,255-i);
         }
 
         frame = new JFrame(gc);
-        frame.setPreferredSize(new Dimension(1026,H*2+2));
+        frame.setPreferredSize(new Dimension(1280,H*3+3));
         frame.setTitle("Derp3d");
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.pack();
@@ -113,14 +134,20 @@ public class Derp3d  {
 
     }
 
-    private void loadTextures() throws IOException {
-        BufferedImage rock = ImageIO.read(new File("src/main/resources/rock.png"));
-            for (int x = 0; x < TEXTURE_SIZE; x++) {
-                texture1[x] = new BufferedImage(1, TEXTURE_SIZE, BufferedImage.TYPE_INT_ARGB);
-                for (int y = 0; y < TEXTURE_SIZE; y++) {
-                    texture1[x].setRGB(0,y, rock.getRGB(x,y));
-                }
+    private BufferedImage[] generateTexture(BufferedImage src) {
+        BufferedImage[] dest = new BufferedImage[src.getWidth()];
+        for (int x = 0; x < src.getWidth(); x++) {
+            dest[x] = new BufferedImage(1, src.getHeight(), BufferedImage.TYPE_INT_ARGB);
+            for (int y = 0; y < src.getHeight(); y++) {
+                dest[x].setRGB(0,y, src.getRGB(x,y));
+            }
         }
+        return dest;
+    }
+
+    private void loadTextures() throws IOException {
+        textures[0] = generateTexture(ImageIO.read(new File("src/main/resources/dystopia.jpg")));
+        textures[1] = generateTexture(ImageIO.read(new File("src/main/resources/rock.png")));
     }
 
     private void createGrid() {
@@ -159,6 +186,8 @@ public class Derp3d  {
 
         lastX = MouseInfo.getPointerInfo().getLocation().getX();
         long ticks = System.nanoTime();
+        deltaTime = 0.0;
+        long lastTime = System.currentTimeMillis();
         while (true) {
             do {
                 // preparation for rendering ?
@@ -167,6 +196,8 @@ public class Derp3d  {
                     graphics.setColor(Color.BLACK);
                     graphics.fillRect(0,0,frame.getWidth(),frame.getHeight());
                     graphics.translate(0, frame.getInsets().top);
+                    deltaTime = (double)(System.currentTimeMillis()-lastTime)/1000.0;
+                    lastTime = System.currentTimeMillis();
                     draw((Graphics2D)graphics);
                     graphics.dispose();
                 } while (strategy.contentsRestored());
@@ -205,8 +236,8 @@ public class Derp3d  {
 
         g.setColor(Color.BLACK);
 
-        g.translate(384,H);
-        g.scale(2,2);
+        g.scale(3,3);
+        g.translate(102,H/2);
         g.setColor(Color.GRAY);
         g.fillRect(0,-H/2,W,H/2);
         g.setColor(Color.DARK_GRAY);
@@ -218,9 +249,9 @@ public class Derp3d  {
                 continue;
             }
             int v = (int)(H / distances[i]);
-            if (v > H-1) {
-                v = H-1;
-            }
+            //if (v > H-1) {
+//                v = H-1;
+//            }
             int c = (int)(255-20.0*distances[i]);
             if (c > 255) {
                 c = 255;
@@ -229,10 +260,9 @@ public class Derp3d  {
                 c = 0;
             }
             //Color cl = texture[rayTextures[i]][textureX[i]];
-            g.drawImage(texture1[textureX[i]], i, -v/2, 1, v, null);
+            g.drawImage(textures[rayTextures[i]][textureX[i]], i, -v/2, 1, v, null);
             g.setColor(opacity[c]);
             g.fillRect(i, -v/2, 1, v);
-
         }
         updateAngle(MouseInfo.getPointerInfo().getLocation());
         if (moveLeft) {
@@ -255,7 +285,7 @@ public class Derp3d  {
     }
 
     private void updateAngle(final Point location) {
-        double movement = (location.getX() - lastX)/30.0;
+        double movement = (location.getX() - lastX) * deltaTime * ROTATE_SPEED;
         lastX = location.getX();
         angle += movement;
         if (angle < 0) {
@@ -348,17 +378,17 @@ public class Derp3d  {
             }
             wallX -= Math.floor(wallX);
 
+            int textureSize = textures[textureIndex].length;
             //x coordinate on the texture
-            textureX[i] = (int)(wallX * (double)TEXTURE_SIZE);
+            textureX[i] = (int)(wallX * (double)textureSize);
 
             if (side == 0 && rx[i] > 0) {
-                textureX[i] = TEXTURE_SIZE - textureX[i] - 1;
+                textureX[i] = textureSize - textureX[i] - 1;
             }
             if (side == 1 && ry[i] < 0)  {
-                textureX[i] = TEXTURE_SIZE - textureX[i] - 1;
+                textureX[i] = textureSize - textureX[i] - 1;
             }
 
-            sides[i] = side == 1;
             rays[i] = distance;
 
             distances[i] = distance * correction;
@@ -382,8 +412,8 @@ public class Derp3d  {
         double movementX = Math.abs(castRay(dirX, 0));
         double movementY = Math.abs(castRay(0,dirY));
         if (movementX > CLOSE_DISTANCE && movementY > CLOSE_DISTANCE) {
-            mx += MOVE_SPEED * dirX;
-            my += MOVE_SPEED * dirY;
+            mx += deltaTime * MOVE_SPEED * dirX;
+            my += deltaTime * MOVE_SPEED * dirY;
         }
     }
 
@@ -430,16 +460,4 @@ public class Derp3d  {
             e.printStackTrace();
         }
     }
-    private static class Rgb {
-            public int r;
-            public int g;
-            public int b;
-
-            public Rgb(int r, int g, int b) {
-                this.r = r;
-                this.g = g;
-                this.b = b;
-            }
-    }
-
 }
