@@ -81,7 +81,7 @@ public class Derp3d  {
         "2000002000002002002",
         "2000002000002002002",
         "2000000000000000012",
-        "2000000001010101012",
+        "2003010103030101012",
         "2222222222222222222"
         );
 
@@ -103,7 +103,7 @@ public class Derp3d  {
     private int textureIndex;
     private final int[] rayTextures = new int[RAYS];
 
-    private final BufferedImage[][] textures = new BufferedImage[2][];
+    private final BufferedImage[][] textures = new BufferedImage[3][];
     private double deltaTime;
 
     private Derp3d() throws IOException {
@@ -148,6 +148,7 @@ public class Derp3d  {
     private void loadTextures() throws IOException {
         textures[0] = generateTexture(ImageIO.read(new File("src/main/resources/dystopia.jpg")));
         textures[1] = generateTexture(ImageIO.read(new File("src/main/resources/rock.png")));
+        textures[2] = generateTexture(ImageIO.read(new File("src/main/resources/IMG_5392.jpg")));
     }
 
     private void createGrid() {
