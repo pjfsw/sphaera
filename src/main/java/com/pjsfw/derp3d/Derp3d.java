@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableList;
 public class Derp3d  {
     private final JFrame frame;
     private static final int TILE_SIZE = 24;
-    private static final double MOVE_SPEED = 0.02;
+    private static final double MOVE_SPEED = 0.03;
     private static final double FOV = 85.0 * Math.PI / 180.0;
     private static final double HALF_FOV = FOV / 2.0;
     private static final int RAYS = 320;
@@ -40,6 +40,7 @@ public class Derp3d  {
     private static final int MAX_RAY = 200;
     private static final double MAX_DISTANCE = 20000;
     private static final double CLOSE_DISTANCE = 0.3;
+    private static final int TEXTURE_WIDTH = 8;
 
     private final Color[] colors1 = new Color[256];
     private final Color[] colors2 = new Color[256];
@@ -50,18 +51,18 @@ public class Derp3d  {
     private boolean moveRight = false;
 
     private List<String> map = ImmutableList.of(
-        "1111111111111111",
-        "1000000000000001",
-        "1000000000111101",
-        "1000010000100001",
-        "1000010000100001",
-        "1000010000100001",
-        "1000100011111001",
-        "1000000000000001",
-        "1000000000000001",
-        "1000000000100001",
-        "1000000000100001",
-        "1111111111111111"
+        "2222222222222222",
+        "2000000000000002",
+        "2000000000111102",
+        "2000010000100002",
+        "2000010000100002",
+        "2000010000100002",
+        "2000100011111002",
+        "2000000000000002",
+        "2000000000000002",
+        "2000000000100002",
+        "2000000000100002",
+        "2222222222222222"
         );
 
     private int[][] grid;
@@ -75,6 +76,31 @@ public class Derp3d  {
     private double ndy;
     private int gridX;
     private int gridY;
+    private int[] textureX = new int[RAYS];
+
+    private Color[][] texture = new Color[][] { {
+        new Color(31,91,91),
+        new Color(31,121,121),
+        new Color(31,91,91),
+        new Color(31,121,121),
+        new Color(31,91,91),
+        new Color(31,121,121),
+        new Color(31,91,91),
+        new Color(31,121,121),
+    }, {
+        new Color(31,0,31),
+        new Color(63,0,63),
+        new Color(97,0,97),
+        new Color(120,0,120),
+        new Color(140,0,140),
+        new Color(120,0,120),
+        new Color(97,0,97),
+        new Color(63,0,63),
+    }};
+
+    private int side;
+    private int textureIndex;
+    private int[] rayTextures = new int[RAYS];
 
     private Derp3d() throws IOException {
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
@@ -110,7 +136,11 @@ public class Derp3d  {
         grid = new int[map.size()][map.get(0).length()];
         for (int i = 0; i < grid.length; i++) {
             for (int j = 0; j < grid[i].length; j++) {
-                grid[i][j] = (j < map.get(i).length() && map.get(i).charAt(j) == '1') ? 1 : 0;
+                if (j < map.get(i).length()) {
+                    grid[i][j] = Integer.parseInt(map.get(i).substring(j,j+1));
+                } else {
+                    grid[i][j] = 0;
+                }
             }
         }
     }
@@ -151,7 +181,9 @@ public class Derp3d  {
                 strategy.show();
                 long wait = WAIT_PERIOD - (int)(System.nanoTime() - ticks);
                 ticks = System.nanoTime();
-                waitNs(wait);
+                if (wait > 1) {
+                    waitNs(wait);
+                }
             } while (strategy.contentsLost());
         }
     }
@@ -159,7 +191,7 @@ public class Derp3d  {
     public void draw(Graphics2D g) {
         for (int y = 0; y < grid.length; y++) {
             for (int x = 0; x < grid[y].length; x++) {
-                g.setColor(grid[y][x] == 1 ? Color.WHITE : Color.BLACK);
+                g.setColor(grid[y][x] > 0 ? Color.WHITE : Color.BLACK);
                 g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE-1, TILE_SIZE-1);
             }
         }
@@ -184,7 +216,10 @@ public class Derp3d  {
         g.translate(384,H);
         g.scale(2,2);
         g.setColor(Color.GRAY);
-        g.drawRect(0,-H/2,W,H);
+        g.fillRect(0,-H/2,W,H/2);
+        g.setColor(Color.DARK_GRAY);
+        g.fillRect(0,0,W,H/2);
+
         for (int i = 0; i < RAYS; i++) {
             double d = distances[i] > 0 ? distances[i] : 0;
             if (d > MAX_DISTANCE || d < 0.02) {
@@ -201,15 +236,11 @@ public class Derp3d  {
             if (c < 0) {
                 c = 0;
             }
-            g.setColor(Color.WHITE);
-            if (sides[i]) {
-                g.setColor(colors2[c]);
-            } else {
-                g.setColor(colors1[c]);
-            }
+            g.setColor(texture[rayTextures[i]][textureX[i]]);
             g.drawLine(i, -v/2, i, v/2);
 
         }
+        updateAngle(MouseInfo.getPointerInfo().getLocation());
         if (moveLeft) {
             moveLeft();
         } else if (moveRight) {
@@ -221,7 +252,6 @@ public class Derp3d  {
             moveBackward();
         }
 
-        updateAngle(MouseInfo.getPointerInfo().getLocation());
         updateVectors();
 
     }
@@ -231,7 +261,7 @@ public class Derp3d  {
     }
 
     private void updateAngle(final Point location) {
-        double movement = (location.getX() - lastX)/20.0;
+        double movement = (location.getX() - lastX)/15.0;
         lastX = location.getX();
         angle += movement;
         if (angle < 0) {
@@ -273,7 +303,7 @@ public class Derp3d  {
 
         boolean hit = false;
         int steps = 0;
-        int side = 0;
+        side = 0;
         while (!hit && steps < MAX_RAY) {
             if (sideDistX < sideDistY) {
                 sideDistX += deltaDistX;
@@ -296,8 +326,10 @@ public class Derp3d  {
         } else {
             int d = (1 - stepY) / 2;
             distance = (mapY - my + (double)d)/ry;
-            distance = -distance;
         }
+
+        textureIndex = grid[mapY][mapX] -1;
+
         return distance;
     }
 
@@ -310,12 +342,33 @@ public class Derp3d  {
             rays[i] =  MAX_RAY;
 
             double distance = castRay(rx[i], ry[i]);
-
-            sides[i] = distance < 0;
-            distance = Math.abs(distance);
-            rays[i] = distance;
+            rayTextures[i] = textureIndex;
             double correction = Math.cos(Math.abs(rayAngleFromCentre));
+
+            //calculate value of wallX
+            double wallX; //where exactly the wall was hit
+            if (side == 0) {
+                wallX = my + distance * ry[i];
+            } else {
+                wallX = mx + distance * rx[i];
+            }
+            wallX -= Math.floor(wallX);
+
+            //x coordinate on the texture
+            textureX[i] = (int)(wallX * (double)TEXTURE_WIDTH);
+
+            if (side == 0 && rx[i] > 0) {
+                textureX[i] = TEXTURE_WIDTH - textureX[i] - 1;
+            }
+            if (side == 1 && ry[i] < 0)  {
+                textureX[i] = TEXTURE_WIDTH - textureX[i] - 1;
+            }
+
+            sides[i] = side == 1;
+            rays[i] = distance;
+
             distances[i] = distance * correction;
+
         }
     }
 
