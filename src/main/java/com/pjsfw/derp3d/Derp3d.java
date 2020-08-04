@@ -24,11 +24,13 @@ import com.google.common.collect.ImmutableList;
 
 public class Derp3d  {
     private final JFrame frame;
-    private static final int TILE_SIZE = 32;
+    private static final int TILE_SIZE = 24;
     private static final double MOVE_SPEED = 0.02;
     private static final double FOV = 75.0 * Math.PI / 180.0;
     private static final double HALF_FOV = FOV / 2.0;
-    private static final int RAYS = 256;
+    private static final int RAYS = 320;
+    private static final int W = RAYS;
+    private static final int H = W * 3 / 4;
     private static final Color rayColor = new Color(255,0,0,127);
     private final double[] rays = new double[RAYS];
     private final double[] distances = new double[RAYS];
@@ -37,6 +39,9 @@ public class Derp3d  {
     private final double[] ry = new double[RAYS];
     private static final int MAX_RAY = 200;
     private static final double MAX_DISTANCE = 20000;
+
+    private final Color[] colors1 = new Color[256];
+    private final Color[] colors2 = new Color[256];
 
     private boolean moveUp = false;
     private boolean moveDown = false;
@@ -77,7 +82,7 @@ public class Derp3d  {
 
 
         frame = new JFrame(gc);
-        frame.setPreferredSize(new Dimension(1024,384));
+        frame.setPreferredSize(new Dimension(1026,H*2+2));
         frame.setTitle("Derp3d");
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.pack();
@@ -91,6 +96,13 @@ public class Derp3d  {
         frame.setResizable(false);
 
         createGrid();
+
+        for (int i = 0; i < 256; i++) {
+            int intensity = i;
+            colors1[i] = new Color(intensity,intensity,intensity);
+            intensity = 200 * i / 256;
+            colors2[i] = new Color(intensity,intensity,intensity);
+        }
     }
 
     private void createGrid() {
@@ -167,20 +179,21 @@ public class Derp3d  {
         }
 
         g.setColor(Color.BLACK);
-        g.translate(512,192);
-        g.setColor(Color.GRAY);
-        g.drawRect(0,-192,512,383);
+
+        g.translate(384,H);
         g.scale(2,2);
+        g.setColor(Color.GRAY);
+        g.drawRect(0,-H/2,W,H);
         for (int i = 0; i < RAYS; i++) {
             double d = distances[i] > 0 ? distances[i] : 0;
             if (d > MAX_DISTANCE || d < 0.1) {
                 continue;
             }
             int v = (int)(96 / distances[i]);
-            if (v > 191) {
-                v = 191;
+            if (v > H-1) {
+                v = H-1;
             }
-            int c = (int)(255-20.0*distances[i]);
+            int c = (int)(255-24.0*distances[i]);
             if (c > 255) {
                 c = 255;
             }
@@ -189,9 +202,9 @@ public class Derp3d  {
             }
             g.setColor(Color.WHITE);
             if (sides[i] == 0) {
-                g.setColor(new Color(c,c/2,c));
+                g.setColor(colors1[c]);
             } else {
-                g.setColor(new Color(c,c,c));
+                g.setColor(colors2[c]);
             }
             g.drawLine(i, -v/2, i, v/2);
 
