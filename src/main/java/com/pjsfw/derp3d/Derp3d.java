@@ -25,15 +25,14 @@ import com.google.common.collect.ImmutableList;
 public class Derp3d  {
     private final JFrame frame;
     private static final int TILE_SIZE = 32;
-    private static final double RAY_STEPPING = 0.1;
     private static final double MOVE_SPEED = 0.02;
     private static final double FOV = 75.0 * Math.PI / 180.0;
     private static final double HALF_FOV = FOV / 2.0;
     private static final int RAYS = 256;
     private static final Color rayColor = new Color(255,0,0,127);
-    private static final Color rayColor2 = new Color(0,255,0,127);
     private final double[] rays = new double[RAYS];
     private final double[] distances = new double[RAYS];
+    private final int[] sides = new int[RAYS];
     private final double[] rx = new double[RAYS];
     private final double[] ry = new double[RAYS];
     private static final int MAX_RAY = 200;
@@ -160,9 +159,6 @@ public class Derp3d  {
         int playerX = (int)(mx * TILE_SIZE);
         int playerY = (int)(my * TILE_SIZE);
         g.drawOval(playerX-2,playerY-2, 4,4);
-
-        //g.drawLine(playerX, playerY, playerX + (int)(dx * 25), playerY + (int)(dy * 25));
-
         g.setColor(rayColor);
 
         for (int i = 0; i < RAYS; i++) {
@@ -170,11 +166,11 @@ public class Derp3d  {
             g.drawLine(playerX, playerY, playerX + (int)(TILE_SIZE * rsq * rx[i]), playerY + (int)(TILE_SIZE * rsq * ry[i]));
         }
 
+        g.setColor(Color.BLACK);
         g.translate(512,192);
         g.setColor(Color.GRAY);
         g.drawRect(0,-192,512,383);
         g.scale(2,2);
-        g.setColor(Color.WHITE);
         for (int i = 0; i < RAYS; i++) {
             double d = distances[i] > 0 ? distances[i] : 0;
             if (d > MAX_DISTANCE || d < 0.1) {
@@ -191,7 +187,12 @@ public class Derp3d  {
             if (c < 0) {
                 c = 0;
             }
-            g.setColor(new Color(c,c,c));
+            g.setColor(Color.WHITE);
+            if (sides[i] == 0) {
+                g.setColor(new Color(c,c/2,c));
+            } else {
+                g.setColor(new Color(c,c,c));
+            }
             g.drawLine(i, -v/2, i, v/2);
 
         }
@@ -207,6 +208,7 @@ public class Derp3d  {
         }
 
         updateAngle(MouseInfo.getPointerInfo().getLocation());
+        updateVectors();
 
     }
 
@@ -224,7 +226,6 @@ public class Derp3d  {
         if (angle > 2*Math.PI) {
             angle -= 2*Math.PI;
         }
-        updateVectors();
     }
 
     private void castRays() {
@@ -233,78 +234,67 @@ public class Derp3d  {
             double rayAngle = rayAngleFromCentre + angle;
             rx[i] = Math.cos(rayAngle);
             ry[i] = Math.sin(rayAngle);
-            double rxStep = rx[i] * RAY_STEPPING;
-            double ryStep = ry[i] * RAY_STEPPING;
             rays[i] =  MAX_RAY;
-            double px = mx;
-            double py = my;
 
-            int cx  = (int)px;
-            int cy = (int)py;
-            int oldCx = cx;
-            int oldCy = cy;
+            int mapX = (int)mx;
+            int mapY = (int)my;
 
+
+            double deltaDistX = Math.abs(1.0 / rx[i]);
+            double deltaDistY = Math.abs(1.0 / ry[i]);
+
+            int stepX;
+            int stepY;
+            double sideDistX;
+            double sideDistY;
+
+            if (rx[i] < 0) {
+                stepX = -1;
+                sideDistX = (mx-(double)mapX) * deltaDistX;
+            } else {
+                stepX = 1;
+                sideDistX = ((double)mapX + 1.0 - mx) * deltaDistX;
+            }
+            if (ry[i] < 0) {
+                stepY = -1;
+                sideDistY = (my-(double)mapY) * deltaDistY;
+            } else {
+                stepY = 1;
+                sideDistY = ((double)mapY + 1.0 - my) * deltaDistY;
+            }
+
+            boolean hit = false;
             int steps = 0;
-            boolean run = true;
-            do {
-                if (cx < 0
-                    || cx >= grid[0].length
-                    || cy < 0
-                    || cy >= grid.length) {
-                    run = false;
-                } else if (grid[cy][cx] == 1) {
-                    double oldPx = px - rxStep;
-                    double oldPy = py - ryStep;
-                    double diffX = 0;
-                    double diffY = 0;
-                    double newX = px;
-                    double newY = py;
-
-                    if (cx > oldCx) {
-                        newX = cx;
-                        diffX = newX - oldPx;
-                    } else if (cx < oldCx) {
-                        newX = cx + 1;
-                        diffX = newX - oldPx;
-                    } else {
-                        diffX = 0;
-                    }
-                    if (cy > oldCy) {
-                        newY = cy;
-                        diffY = newY - oldPy;
-                    } else if (cy < oldCy) {
-                        newY = cy + 1;
-                        diffY = newY - oldPy;
-                    } else {
-                        diffY = 0;
-                    }
-
-                    if (Math.abs(diffX) > Math.abs(diffY)) {
-                        px = newX;
-                        py = oldPy + ryStep * diffX / rxStep;
-                    } else {
-                        px = oldPx + rxStep * diffY / ryStep;
-                        py = newY;
-                    }
-                    run = false;
+            int side = 0;
+            while (!hit && steps < MAX_RAY) {
+                if (sideDistX < sideDistY) {
+                    sideDistX += deltaDistX;
+                    mapX += stepX;
+                    side = 0;
                 } else {
-                    steps++;
-                    px += rxStep;
-                    py += ryStep;
-                    // TODO correct "holes"
+                    sideDistY += deltaDistY;
+                    mapY += stepY;
+                    side = 1;
                 }
-                oldCx = cx;
-                oldCy = cy;
-                cx = (int)px;
-                cy = (int)py;
-            } while (steps < MAX_RAY && run);
-            double diffX = px-mx;
-            double diffY = py-my;
-            double distance = Math.sqrt(diffX*diffX + diffY*diffY);
+                hit = grid[mapY][mapX] > 0;
+                steps++;
+            }
+
+            double distance;
+
+            if (side == 0) {
+                int d = (1 - stepX) / 2;
+                distance = (mapX - mx + (double)d)/rx[i];
+            } else {
+                int d = (1 - stepY) / 2;
+                distance = (mapY - my + (double)d)/ry[i];
+            }
+
+
             rays[i] = distance;
+            sides[i]= side;
             if (steps < MAX_RAY) {
                 double correction = Math.cos(Math.abs(rayAngleFromCentre));
-                //System.out.println(correction);
                 distances[i] = distance * correction;
             } else {
                 distances[i] = MAX_DISTANCE+1.0;
@@ -314,6 +304,8 @@ public class Derp3d  {
     }
 
     private void updateVectors() {
+        //mx = 2.374047;
+        //my = 2.121556;
         dx = Math.cos(angle);
         dy = Math.sin(angle);
         ndx = Math.cos(angle+Math.PI/2);
@@ -326,25 +318,21 @@ public class Derp3d  {
     private void moveForward() {
         mx += (MOVE_SPEED*dx);
         my += (MOVE_SPEED*dy);
-        updateVectors();
     }
 
     private void moveBackward() {
         mx -= (MOVE_SPEED*dx);
         my -= (MOVE_SPEED*dy);
-        updateVectors();
     }
 
     private void moveLeft() {
         mx -= (MOVE_SPEED*ndx);
         my -= (MOVE_SPEED*ndy);
-        updateVectors();
     }
 
     private void moveRight() {
         mx += (MOVE_SPEED*ndx);
         my += (MOVE_SPEED*ndy);
-        updateVectors();
     }
 
     private boolean handleKeyEvent(KeyEvent event) {
