@@ -34,17 +34,17 @@ public class Derp3d  {
     private static final double HALF_FOV = FOV / 2.0;
     private static final int RAYS = 320;
     private static final int W = RAYS;
+    private static final double PROJECTION_DIST = (double)RAYS/(2.0 * Math.tan(HALF_FOV));
     private static final int H = 200;
     private static final Color rayColor = new Color(255,0,0,127);
     private final double[] rays = new double[RAYS];
     private final double[] distances = new double[RAYS];
     private final double[] rx = new double[RAYS];
     private final double[] ry = new double[RAYS];
+    private final double[] RAY_ANGLES = new double[RAYS];
     private static final int MAX_RAY = 200;
-    private static final double MAX_DISTANCE = 20000;
     private static final double CLOSE_DISTANCE = 0.3;
 
-    private static final Color shineColor = new Color(0,0,0,191);
     private boolean moveUp = false;
     private boolean moveDown = false;
     private boolean moveLeft = false;
@@ -107,6 +107,7 @@ public class Derp3d  {
     private double deltaTime;
 
     private Derp3d() throws IOException {
+        createRayAngles();
         loadTextures();
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         GraphicsDevice[] gs = ge.getScreenDevices();
@@ -131,6 +132,16 @@ public class Derp3d  {
         frame.setResizable(false);
 
         createGrid();
+
+    }
+
+    private void createRayAngles() {
+        double halfRays = RAYS/2.0;
+
+        for (int ray = 0; ray < RAYS; ray++) {
+            RAY_ANGLES[ray] = Math.atan( ( (double)ray - halfRays ) / PROJECTION_DIST );
+
+        }
 
     }
 
@@ -245,11 +256,7 @@ public class Derp3d  {
         g.fillRect(0,0,W,H/2);
 
         for (int i = 0; i < RAYS; i++) {
-            double d = distances[i] > 0 ? distances[i] : 0;
-            if (d > MAX_DISTANCE || d < 0.02) {
-                continue;
-            }
-            int v = (int)(H / distances[i]);
+            int v = (int)((double)H / distances[i]);
             //if (v > H-1) {
 //                v = H-1;
 //            }
@@ -282,7 +289,7 @@ public class Derp3d  {
     }
 
     private double getRayAngleFromCentre(int ray) {
-        return (double)ray * FOV / (double)RAYS - HALF_FOV;
+        return RAY_ANGLES[ray];
     }
 
     private void updateAngle(final Point location) {
